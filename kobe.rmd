@@ -1,0 +1,146 @@
+---
+title: "kobe"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Packages Used
+```{r}
+library(tidyverse)
+library(gridExtra)
+library(ggplot2)
+library(knitr)
+library(gganimate)
+library(gapminder)
+```
+
+
+```{r}
+kobeData <- read.csv('kobe_data.csv');
+kobeData  <-na.omit(kobeData);
+summary(kobeData)
+str(kobeData)
+```
+
+# Correlations
+```{r}
+# action type, combined shot type, lat, long, 
+# -c(columnNumbers)
+# cleanedData <- kobeData[-c()]
+# cor(kobeData)
+#names(kobeData)[names(kobeData) == "combined_shot_type"] <- "Type of Shots"
+```
+
+# Parse to find the years of the games 
+```{r}
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+head(kobeData)
+```
+
+
+
+# Visualizations
+
+```{r}
+# Shot type
+ggplot() + 
+  # We use a different alpha value for jump shots to improve the visualization
+  geom_point(data=kobeData %>% filter(combined_shot_type=="Jump Shot"),
+             aes(x=lon, y=lat), colour="black", alpha=0.1) +
+  geom_point(data=kobeData %>% filter(combined_shot_type!="Jump Shot"),
+             aes(x=lon, y=lat, colour=combined_shot_type), alpha=0.8) +
+  labs(title="Combined Shot Type Visualized on Court", captions = "(based on data from Kaggle and NBA.com)", 
+       x="Latitude", y="Longitude") +
+  theme(legend.title=element_text(),
+        plot.title=element_text()) 
+```
+
+```{r}
+# Accuracy by Main Shot Type 
+
+
+# Accuracy by shot type 
+p<-kobeData %>%
+  group_by(action_type,Year) %>%
+  summarise(Accuracy=mean(shot_made_flag),
+            counts=n()) %>%
+  filter(counts>10) %>%
+  ggplot(aes(x=reorder(action_type, Accuracy), y=Accuracy)) + 
+  geom_point(aes(colour=Accuracy), size=2) +
+  scale_colour_gradient(low="orangered", high="chartreuse3") +
+  labs(title='Year: {frame_time}: Accuracy by shot type') +
+  theme_bw() +
+  theme(legend.title=element_text(),
+        legend.position="none",
+        plot.title=element_text(hjust=0.5)) +
+  transition_time(Year) +
+  ease_aes('linear')+
+  coord_flip()
+animate(p, nframes=500)
+```
+
+```{r}
+# Accuracy by seconds remaining
+p <-kobeData %>%
+  group_by(seconds_remaining,Year) %>%
+  summarise(Accuracy=mean(shot_made_flag)) %>%
+  ggplot(aes(x=seconds_remaining, y=Accuracy, group=Year)) + 
+  geom_bar(aes(fill=Accuracy), stat="identity") +
+  scale_fill_gradient(low="red", high="green") +
+  labs(title="Accuracy by seconds remaining", x="Seconds remaining")  +
+  theme_bw() +
+  theme(legend.position="none",
+        plot.title=element_text(hjust=0.5))+
+  labs(title = 'Year: {frame_time}', x = 'Second Left In Game', y = 'Accuracy') +
+  transition_time(Year) +
+  ease_aes('linear')
+gganimate(p,interval=0)
+```
+
+```{r}
+# Accuracy by opponent
+kobeData %>%
+  group_by(opponent) %>%
+  summarise(Accuracy=mean(shot_made_flag)) %>%
+  ggplot(aes(x=reorder(opponent, -Accuracy), y=Accuracy)) + 
+  geom_bar(aes(fill=Accuracy), stat="identity") +
+  labs(title="Accuracy by opponent", x="Opponent") +
+  theme_bw() +
+  theme(legend.position="none")  
+```
+```{r}
+# Accuracy by Location over Time Gif
+p <-kobeData %>%
+  group_by(shot_zone_basic,Year) %>%
+  summarise(Accuracy=mean(shot_made_flag),counts=n()) %>%
+  ggplot(aes(x=shot_zone_basic, y=Accuracy, group=Year)) + 
+  geom_bar(aes(fill=Accuracy), stat="identity") + 
+  scale_fill_gradient(low="orangered", high="chartreuse3") +
+  labs(title="Accuracy by seconds remaining", x="Seconds remaining")  +
+  theme_bw() +
+  theme(legend.position="none",
+        plot.title=element_text(hjust=0.5))+
+  labs(title = 'Year: {frame_time}', x = 'Shot Location Over Time', y = 'Accuracy') +
+  transition_time(Year) +
+  ease_aes('linear')
+p
+```
+
+Accuracy in Playoffs vs Regular
+```{r}
+p <- kobeData %>%
+  group_by(playoffs)%>%
+  summarise(Accuracy=mean(shot_made_flag)) %>%
+  ggplot(aes(x=playoffs, y=Accuracy)) + 
+  geom_bar(aes(fill=playoffs), stat="identity")+
+  scale_fill_gradient(low="orangered", high="chartreuse3") +
+  labs(title="Accuracy in Playoffs", x="In Playoffs")  +
+  theme_bw() +
+  theme(legend.position="bottom")
+p
+```
+

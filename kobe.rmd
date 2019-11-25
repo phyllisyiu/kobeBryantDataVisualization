@@ -80,7 +80,7 @@ p<-kobeData %>%
   transition_time(Year) +
   ease_aes('linear')+
   coord_flip()
-animate(p, nframes=500)
+animate(p, renderer = ffmpeg_renderer(format = "auto"))
 ```
 
 ```{r}
@@ -98,7 +98,7 @@ p <-kobeData %>%
   labs(title = 'Year: {frame_time}', x = 'Second Left In Game', y = 'Accuracy') +
   transition_time(Year) +
   ease_aes('linear')
-gganimate(p,interval=0)
+animate(p, renderer = ffmpeg_renderer(format = "auto"))
 ```
 
 ```{r}
@@ -127,7 +127,7 @@ p <-kobeData %>%
   labs(title = 'Year: {frame_time}', x = 'Shot Location Over Time', y = 'Accuracy') +
   transition_time(Year) +
   ease_aes('linear')
-p
+animate(p, renderer = ffmpeg_renderer(format = "auto"))
 ```
 
 Accuracy in Playoffs vs Regular

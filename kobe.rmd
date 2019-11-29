@@ -143,4 +143,23 @@ p <- kobeData %>%
   theme(legend.position="bottom")
 p
 ```
+Logistic Regression
+```{r}
+# Clean the data
+logisticData_kobeData <- na.omit(kobeData)
+
+# Split the data into training and test set 
+set.seed(123)
+
+num_samples = dim(logisticData_kobeData)[1]
+sampling.rate = 0.8
+training <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
+trainingSet <- logisticData_kobeData[training, ]
+testing <- setdiff(1:num_samples,training)
+testingSet <- logisticData_kobeData[testing, ]
+
+
+
+
+```
 

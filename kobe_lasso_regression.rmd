@@ -1,0 +1,113 @@
+---
+title: "Kobe Data Lasso Regression"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(caret)
+library(glmnet)
+```
+
+```{r}
+kobeData <- read.csv('kobe_data.csv');
+kobeData  <-na.omit(kobeData);
+
+head(kobeData)
+levels(kobeData$action_type)
+levels(kobeData$combined_shot_type)
+levels(kobeData$shot_type)
+levels(kobeData$shot_zone_area)
+levels(kobeData$shot_zone_basic)
+levels(kobeData$shot_zone_range)
+
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-action_type,-game_date,-game_id,-team_id,-team_name,-matchup,-opponent, -season))
+head(kobeData)
+```
+Use Carats to make the data into dummies
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+print(trsf)
+```
+
+Construct testing and training sets 
+```{r}
+training.samples <- kobeData$shot_made_flag %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- kobeData[training.samples, ]
+test.data <- kobeData[-training.samples, ]
+```
+
+Change the variables from categorical to dummy variables
+```{r}
+# Dummy code categorical predictor variables
+x <- model.matrix(shot_made_flag~., train.data)[,-1]
+# Convert the outcome (class) to a numerical variable, set pos as 1, neg as 0 
+y <- train.data$shot_made_flag
+```
+
+Lasso Regression Model
+```{r}
+# Find the best lambda using cross-validation
+set.seed(123) 
+cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+# Fit the final model on the training data
+model <- glmnet(x, y, alpha = 1, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+# Display regression coefficients
+coef(model)
+# Make predictions on the test data
+x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy
+observed.classes <- test.data$shot_made_flag
+mean(predicted.classes == observed.classes)
+```
+Plot Lasso to find the best lambda
+```{r}
+cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+plot(cv.lasso)
+```
+Compare best lambda vs se1 lambda
+```{r}
+cv.lasso$lambda.min
+cv.lasso$lambda.1se
+```
+Compute using Lasso Min 
+```{r}
+lasso.model <- glmnet(x, y, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.min)
+# Make prediction on test data
+x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy
+observed.classes <- test.data$shot_made_flag
+mean(predicted.classes == observed.classes)
+```
+```{r}
+lasso.model <- glmnet(x, y, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.1se)
+# Make prediction on test data
+x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy
+observed.classes <- test.data$shot_made_flag
+mean(predicted.classes == observed.classes)
+```
+```{r}
+coef(cv.lasso, cv.lasso$lambda.1se)
+```
+

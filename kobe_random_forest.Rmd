@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(tidyverse)
+library(randomForest)
+
+# read data
+kobeData <- read.csv('kobe_data.csv');
+
+# remove rows with NAs (i.e. ther eare NAs in `shot_made_flag`)
+kobeData  <-na.omit(kobeData);
+
+# head(kobeData)
+# checking out the predefined values for the castegorical data
+
+# action_type, combined_shot_type, shot_type: how kobe shot a ball
+# levels(kobeData$action_type)
+# levels(kobeData$combined_shot_type)
+# levels(kobeData$shot_type)
+
+
+
+# team_id, team_name; just some random number and LAL; not useful. will omit
+# levels(kobeData$team_id)
+# levels(kobeData$team_name)
+
+# opponent, matchup; same thing, only keep opponent
+# levels(kobeData$matchup)
+# levels(kobeData$opponent)
+
+# combine minutes_remaining, seconds_remaining
+kobeData$time_remaining <- kobeData$minutes_remaining * 60 + kobeData$seconds_remaining
+
+# season data
+# levels(kobeData$season)
+
+# shot_zone_area, shot_zone_basic, shot_zone_range; arguably don't need these because we have lat, long, loc_x, loc_y
+# levels(kobeData$shot_zone_area)
+# levels(kobeData$shot_zone_basic)
+# levels(kobeData$shot_zone_range)
+
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining))
+head(kobeData)
+```
+
+make dummy variables
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+trsf$shot_made_flag <- as.factor(trsf$shot_made_flag)
+head(trsf)
+dim(trsf)
+```
+
+Construct testing and training sets 
+```{r}
+num_samples = dim(trsf)[1]
+sampling.rate = 0.8
+training <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
+trainingSet <- trsf[training, ]
+testing <- setdiff(1:num_samples, training)
+testingSet <- trsf[testing, ]
+```
+
+train a random forest model using training set
+```{r}
+randForestModel <- randomForest(shot_made_flag ~ ., data = trainingSet)
+```
+
+```{r}
+plot(randForestModel)
+legend("top", colnames(randForestModel$err.rate),fill=1:3)
+```
+
+Perform predictions for testing set
+```{r}
+predictedLabels <- predict(randForestModel, testingSet)
+head(predictedLabels)
+```
+
+evaluate the model: compute a misclassification rate (rate of incorrect predictions). we don't calculate MSE cuz the predictions are categories and not continuous values.
+
+```{r}
+# get num of data points in test set
+sizeTestSet = dim(testingSet)[1]
+
+# get # of data points that are misclassified
+error = sum(predictedLabels != testingSet$shot_made_flag)
+
+# calculate misclassification rate
+misclassificationRate = error / sizeTestSet
+
+# display misclassification rate
+print(misclassificationRate)
+```

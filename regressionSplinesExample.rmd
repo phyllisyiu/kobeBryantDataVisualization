@@ -1,0 +1,97 @@
+---
+title: "Regression Splines Example - Adapted for Classification"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Helper packages
+library(dplyr)     # for data wrangling
+library(ggplot2)   # for awesome plotting
+
+# Modeling packages
+library(earth)     # for fitting MARS models
+library(caret)     # for automating the tuning process
+
+# Model interpretability packages
+library(vip)       # for variable importance
+library(pdp)       # for variable relationships
+
+library(tidyverse)
+library(mlbench)
+```
+
+Load in our sample data
+```{r}
+data("PimaIndiansDiabetes2", package = "mlbench")
+PimaIndiansDiabetes2 <- na.omit(PimaIndiansDiabetes2)
+sample_n(PimaIndiansDiabetes2, 3)
+# Split the data into training and test set
+set.seed(123)
+training.samples <- PimaIndiansDiabetes2$diabetes %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- PimaIndiansDiabetes2[training.samples, ]
+test.data <- PimaIndiansDiabetes2[-training.samples, ]
+```
+
+Check our MARS Model
+```{r}
+mars1 <- earth(
+   diabetes~ .,  
+  data = train.data   
+)
+
+# Print model summary
+print(mars1)
+```
+There will be 8 terms in this model including the intercept, terms include hinge functions which are produced from the original 8 predictors 
+model automatically dummy encodes categorical features 
+
+```{r}
+summary(mars1) %>% .$coefficients %>% head(10)
+```
+```{r}
+plot(mars1, which = 1)
+```
+GCV solid black line is based on the number of terms retained in the modle (r^2), vertical dashed line at 8 tells us the optimal number of non-intercept terms retained where marginal increases in GCV R^2 are less than 0.001
+
+Two tuning params: max degree of interactions and number of terms in the final model, use grid seach to identify the optimal combination of these hyperparams that minimize prediction error 
+```{r}
+# Tuning
+hyper_grid <- expand.grid(
+  degree = 1:3, 
+  nprune = seq(2, 100, length.out = 10) %>% floor()
+)
+head(hyper_grid)
+```
+Use Carat to Cross Validate 
+```{r}
+# Cross-validated model
+set.seed(123)  # for reproducibility
+cv_mars <- train(
+  x = subset(train.data, select = -diabetes),
+  y = train.data$diabetes,
+  method = "earth",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneGrid = hyper_grid
+)
+
+# View results
+cv_mars$bestTune
+##    nprune degree
+## 25     45      3
+ggplot(cv_mars)
+```
+How does feature implementation work for MARS
+Backwards elimination feature selction routine. Looks at reductions in the GCV estimate of errors as each predictor is added to the model. This total reduction is used as the variable importance measure (value = "gcv").
+```{r}
+# variable importance plots
+p1 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "gcv") + ggtitle("GCV")
+p2 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "rss") + ggtitle("RSS")
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+

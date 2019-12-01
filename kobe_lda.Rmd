@@ -1,0 +1,146 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# LDA (Linear Disriminant Analysis)
+-   used as adimensionality reduction technique
+-   used in the pre-processing step for pattern classification
+-   has the goal to project a dataset onto a lower-dimensional space
+
+we are interested in the axes that maximize the seperation between multiple classes (i.e. maximizing the component axes for class-separation)
+
+The goal of LDA is to project a feature space (a dataset n-dimensional samples) onto a small subspace k(where k <= n - 1) while maintaining the class-discriminatory information.
+
+LDA = transformation technique used for dimenionsal reduction.
+
+steps:
+-   1.) compute the d-dimenisional mean vectors for the different classes from the dataset
+-   2.) compute the scatter matrices (in-between-class and within-class scatter matrix)
+-   3.) compute eigenvectors and corrsponding eigenvalues
+-   4.) sort eigenvectors by decreasing eigenvalues and choose k eigenvectors with the largest eigenvalues to form d x k dimensional matrix W
+-   use this d x k eigenvector matrix to transform the samples onto the new subspace
+
+from the n indepedent variables of the dataset, LDA extracts p <= n new independent variables that separate the most the classes of the dependent variable.
+
+## data preprocessing
+```{r}
+library(caret)
+library(tidyverse)
+library(class)
+
+# read data
+kobeData <- read.csv('kobe_data.csv');
+
+# remove rows with NAs (i.e. ther eare NAs in `shot_made_flag`)
+kobeData  <-na.omit(kobeData);
+
+# head(kobeData)
+# checking out the predefined values for the castegorical data
+
+# action_type, combined_shot_type, shot_type: how kobe shot a ball
+# levels(kobeData$action_type)
+# levels(kobeData$combined_shot_type)
+# levels(kobeData$shot_type)
+
+
+
+# team_id, team_name; just some random number and LAL; not useful. will omit
+# levels(kobeData$team_id)
+# levels(kobeData$team_name)
+
+# opponent, matchup; same thing, only keep opponent
+# levels(kobeData$matchup)
+# levels(kobeData$opponent)
+
+# combine minutes_remaining, seconds_remaining
+kobeData$time_remaining <- kobeData$minutes_remaining * 60 + kobeData$seconds_remaining
+
+# season data
+# levels(kobeData$season)
+
+# shot_zone_area, shot_zone_basic, shot_zone_range; arguably don't need these because we have lat, long, loc_x, loc_y
+# levels(kobeData$shot_zone_area)
+# levels(kobeData$shot_zone_basic)
+# levels(kobeData$shot_zone_range)
+
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining))
+head(kobeData)
+```
+
+make dummy variables
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+# trsf$shot_made_flag <- as.factor(trsf$shot_made_flag)
+head(trsf)
+dim(trsf)
+```
+
+Normalize data cuz we are doing knn
+
+```{r}
+for (i in colnames(trsf)) {
+  if (i != "shot_made_flag") {
+    trsf[[i]] = (trsf[[i]] - mean(trsf[[i]])) / sd(trsf[[i]])
+  }
+}
+```
+
+
+
+Construct testing and training sets 
+```{r}
+num_samples = dim(trsf)[1]
+sampling.rate = 0.8
+training <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
+trainingSet <- trsf[training, ]
+testing <- setdiff(1:num_samples, training)
+testingSet <- trsf[testing, ]
+```
+
+# Applying LDA
+```{r}
+library(MASS)
+lda = lda(formula = shot_made_flag ~ ., data = trainingSet)
+# use lda to transform dataset
+trainingSet = as.data.frame(predict(lda, trainingSet))
+
+# use new extracted features from lda 
+# based on how many classes there are, we get numClasses - 1 features from lda.
+trainingSet = trainingSet[c(4, 1)]
+testingSet = as.data.frame(predict(lda, testingSet))
+testingSet = testingSet[c(4, 1)]
+```
+
+get features of training set, test set
+```{r}
+trainingFeatures <- subset(trainingSet, select=c(-class))
+trainingLabels <- trainingSet$class
+testingFeatures <- subset(testingSet, select=c(-class))
+```
+
+apply knn
+```{r}
+predictedLabels = knn(trainingFeatures, testingFeatures, trainingLabels, k = 5)
+```
+
+misclassifcation rate
+```{r}
+# get num of data points in test set
+sizeTestSet = dim(testingSet)[1]
+
+# get # of data points that are misclassified
+error = sum(predictedLabels != testingSet$class)
+
+# calculate misclassification rate
+misclassificationRate = error / sizeTestSet
+
+# display misclassification rate
+print(misclassificationRate)
+```

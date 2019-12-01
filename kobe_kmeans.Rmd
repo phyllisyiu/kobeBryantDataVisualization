@@ -1,0 +1,121 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# K-Means Clustering
+
+## Data Preprocessing
+
+```{r}
+library(caret)
+library(tidyverse)
+
+# read data
+kobeData <- read.csv('kobe_data.csv');
+
+# remove rows with NAs (i.e. ther eare NAs in `shot_made_flag`)
+kobeData  <-na.omit(kobeData);
+
+# head(kobeData)
+# checking out the predefined values for the castegorical data
+
+# action_type, combined_shot_type, shot_type: how kobe shot a ball
+# levels(kobeData$action_type)
+# levels(kobeData$combined_shot_type)
+# levels(kobeData$shot_type)
+
+
+
+# team_id, team_name; just some random number and LAL; not useful. will omit
+# levels(kobeData$team_id)
+# levels(kobeData$team_name)
+
+# opponent, matchup; same thing, only keep opponent
+# levels(kobeData$matchup)
+# levels(kobeData$opponent)
+
+# combine minutes_remaining, seconds_remaining
+kobeData$time_remaining <- kobeData$minutes_remaining * 60 + kobeData$seconds_remaining
+
+# season data
+# levels(kobeData$season)
+
+# shot_zone_area, shot_zone_basic, shot_zone_range; arguably don't need these because we have lat, long, loc_x, loc_y
+# levels(kobeData$shot_zone_area)
+# levels(kobeData$shot_zone_basic)
+# levels(kobeData$shot_zone_range)
+
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining))
+head(kobeData)
+```
+
+make dummy variables
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+trsf$shot_made_flag <- as.factor(trsf$shot_made_flag)
+head(trsf)
+dim(trsf)
+```
+
+using elbow method to find optimal number of clusters
+```{r}
+# b/c there are random factors in k-means, we can obtain diff results. therefore, must seed.
+set.seed(6)
+
+# compute diff within-cluster sum of squares (variance), save to vector, plot it.
+wcss <- vector()
+for (i in 1:10) {
+  wcss[i] = sum(kmeans(trsf, i)$withinss)
+}
+
+plot(1:10,
+     wcss,
+     type = 'b',
+     main = paste('The Elbow Method'),
+     xlab = 'Number of clusters',
+     ylab = 'WCSS')
+```
+
+optimal number is 4 clusters based on elbow method.
+
+## Model
+
+```{r}
+# lda first
+library(MASS)
+lda = lda(formula = shot_made_flag ~ ., data = trsf)
+# use lda to transform dataset
+trsf = as.data.frame(predict(lda, trsf))
+
+# use new extracted features from lda 
+# based on how many classes there are, we get numClasses - 1 features from lda.
+trsf = trsf[c(4, 1)]
+
+# apply kmeans to dataset
+set.seed(29)
+kmeans = kmeans(x = trsf, centers = 4)
+y_kmeans = kmeans$cluster
+
+# Visualising the clusters
+library(cluster)
+clusplot(trsf,
+         y_kmeans,
+         lines = 0,
+         shade = TRUE,
+         color = TRUE,
+         labels = 2,
+         plotchar = FALSE,
+         span = TRUE,
+         main = paste('Kobe Shots'),
+         xlab = '',
+         ylab = '')
+```
+
+## Results

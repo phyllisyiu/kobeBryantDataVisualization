@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#SVM Model
+
+```{r}
+kobedata <- read.csv("kobedata.csv", header=TRUE)
+head(kobedata)
+```
+
+#Move shot_made_flag to the first column, as it is the dependent variable. 
+```{r}
+shots <- c("shot_made_flag")
+kobedata <- kobedata[, c(shots, setdiff(names(kobedata), shots))]
+names(kobedata)
+```
+
+#Make sure shot_made_flag is a factor in order to run in SVM model. 
+```{r}
+kobedata$shot_made_flag <- as.factor (kobedata$shot_made_flag)
+head(kobedata)
+```
+
+#Shot_made_flag contains missing values. The following code finds rows with missing data and removes them. 
+```{r}
+kobedata <- na.omit(kobedata)
+summary(kobedata)
+```
+
+#Remove columns we cannot normalize in R. 
+```{r}
+library(dplyr)
+names(kobedata)
+```
+
+#Normalize data
+```{r}
+for (i in 2:dim(kobedata)[2])
+{
+  kobedata[i] = (kobedata[i]-mean(kobedata[,i]))/sd(kobedata[,i])
+}
+head(kobedata)
+```
+
+#Training and Testing
+```{r}
+numsamples<-dim(kobedata)[1]
+samplingrate=0.8
+training <- sample(1:numsamples, samplingrate*numsamples, replace= FALSE)
+trainingset <- kobedata[training, ]
+testing <-setdiff(1:numsamples, training)
+testingset <- kobedata[testing, ]
+```
+
+#Load SVM library
+```{r}
+library(e1071)
+```
+
+
+#Train a support vector machine model using the training set. Apply a linear SVM with an error cost of 20.
+```{r}
+svmmodel <- svm(shot_made_flag~., data= trainingset, kernel="polynomial", cost=20)
+```
+#Do predictions on the test set
+```{r}
+predictions <- predict(svmmodel, testingset, type="class")
+predictions
+```
+
+#compute misclass rate 
+```{r}
+sizeoftest = dim(testingset)[1]
+error = sum(predictions != testingset$complaints)
+missclass = error/sizeoftest
+missclass
+```
+```
+

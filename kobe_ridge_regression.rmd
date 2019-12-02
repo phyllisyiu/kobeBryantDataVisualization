@@ -1,0 +1,103 @@
+---
+title: "Kobe Ridge Regression"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(dplyr)     # for data wrangling
+library(ggplot2)   # for awesome plotting
+
+# Modeling packages 
+library(caret)     # for automating the tuning process
+
+# Model interpretability packages
+library(vip)       # for variable importance
+library(pdp)       # for variable relationships
+
+library(tidyverse)
+library(broom)
+library(glmnet)
+```
+```{r}
+kobeData <- read.csv('kobe_data.csv');
+kobeData  <-na.omit(kobeData);
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-action_type,-game_date,-game_id,-team_id,-team_name,-matchup,-opponent, -season))
+head(kobeData)
+```
+Use Carats to make the data into dummies
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+print(trsf)
+```
+Construct testing and training sets 
+```{r}
+training.samples <- kobeData$shot_made_flag %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- kobeData[training.samples, ]
+test.data <- kobeData[-training.samples, ]
+```
+
+Change the variables from categorical to dummy variables
+```{r}
+# Dummy code categorical predictor variables
+x <- model.matrix(shot_made_flag~., train.data)[,-1]
+# Convert the outcome (class) to a numerical variable, set pos as 1, neg as 0 
+y <- train.data$shot_made_flag
+```
+
+Ridge Regression Model
+```{r}
+# Find the best lambda using cross-validation
+set.seed(123)
+lambdas <- 10^seq(3, -2, by = -.1)
+cv.ridge <- cv.glmnet(x, y, alpha = 0, family = "binomial")
+# Fit the final model on the training data
+model <- glmnet(x, y, alpha = 0, family = "binomial",
+                lambda = lambdas)
+```
+
+```{r}
+cv_fit <- cv.glmnet(x, y, alpha = 0, lambda = lambdas)
+plot(cv_fit)
+```
+Optimized Lambda
+```{r}
+opt_lambda <- cv_fit$lambda.min
+opt_lambda
+```
+
+
+```{r}
+x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > mean(probabilities), 1, 0)
+# get num of data points in test set
+sizeTestSet = dim(test.data)[1]
+
+# get # of data points that are misclassified
+error = sum(predicted.classes != test.data$shot_made_flag)
+
+# calculate misclassification rate
+misclassificationRate = error / sizeTestSet
+
+# display misclassification rate
+print(misclassificationRate)
+```
+
+```{r}
+op <- par(mfrow=c(1, 2))
+plot(cv.ridge $glmnet.fit, "norm",   label=TRUE)
+plot(cv.ridge$glmnet.fit, "lambda", label=TRUE)
+par(op)
+```
+

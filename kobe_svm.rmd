@@ -6,7 +6,7 @@ output: html_notebook
 #SVM Model
 
 ```{r}
-kobedata <- read.csv("kobedata.csv", header=TRUE)
+kobedata <- read.csv("kobe_data.csv", header=TRUE)
 head(kobedata)
 ```
 
@@ -32,7 +32,15 @@ summary(kobedata)
 #Remove columns we cannot normalize in R. 
 ```{r}
 library(dplyr)
+library(caret) 
 names(kobedata)
+```
+Convert all Categorical data to dummy 
+```{r}
+dmy <- dummyVars("~ . ",data = kobeData)
+trsf <- data.frame(predict(dmy, newdata = kobeData))
+shots <- c("shot_made_flag")
+trsf <- trsf[, c(shots, setdiff(names(trsf), shots))]
 ```
 
 #Normalize data

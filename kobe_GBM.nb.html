@@ -1753,14 +1753,58 @@ summary {
 <p>Try executing this chunk by clicking the <em>Run</em> button within the chunk or by placing your cursor inside it and pressing <em>Ctrl+Shift+Enter</em>.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGxvdChjYXJzKVxuYGBgIn0= -->
-<pre class="r"><code>plot(cars)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkcGx5cikgICAgICMgZm9yIGRhdGEgd3JhbmdsaW5nXG5saWJyYXJ5KGdncGxvdDIpICAgIyBmb3IgYXdlc29tZSBwbG90dGluZ1xuXG4jIE1vZGVsaW5nIHBhY2thZ2VzXG5saWJyYXJ5KGVhcnRoKSAgICAgIyBmb3IgZml0dGluZyBNQVJTIG1vZGVsc1xubGlicmFyeShjYXJldCkgICAgICMgZm9yIGF1dG9tYXRpbmcgdGhlIHR1bmluZyBwcm9jZXNzXG5cbiMgTW9kZWwgaW50ZXJwcmV0YWJpbGl0eSBwYWNrYWdlc1xubGlicmFyeSh2aXApICAgICAgICMgZm9yIHZhcmlhYmxlIGltcG9ydGFuY2VcbmxpYnJhcnkocGRwKSAgICAgICAjIGZvciB2YXJpYWJsZSByZWxhdGlvbnNoaXBzXG5cbmxpYnJhcnkodGlkeXZlcnNlKVxubGlicmFyeShtbGJlbmNoKVxubGlicmFyeSh4Z2Jvb3N0KVxuYGBgIn0= -->
+<pre class="r"><code>library(dplyr)     # for data wrangling
+library(ggplot2)   # for awesome plotting
+
+# Modeling packages
+library(earth)     # for fitting MARS models
+library(caret)     # for automating the tuning process
+
+# Model interpretability packages
+library(vip)       # for variable importance
+library(pdp)       # for variable relationships
+
+library(tidyverse)
+library(mlbench)
+library(xgboost)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5BdHRhY2hpbmcgcGFja2FnZTog46S847ixeGdib29zdOOkvOO4slxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDjpLzjuLFwYWNrYWdlOmRwbHly46S847iyOlxuXG4gICAgc2xpY2VcbiJ9 -->
+<pre><code>
+Attaching package: 㤼㸱xgboost㤼㸲
+
+The following object is masked from 㤼㸱package:dplyr㤼㸲:
+
+    slice</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxua29iZURhdGEgPC0gcmVhZC5jc3YoJ2tvYmVfZGF0YS5jc3YnKTtcbmtvYmVEYXRhICA8LW5hLm9taXQoa29iZURhdGEpO1xuXG4jIFBhcnNlIEdhbWUgZGF0ZSBpbnRvIFllYXJzIFxua29iZURhdGEkWWVhciA8LSBmb3JtYXQoYXMuRGF0ZShrb2JlRGF0YSRnYW1lX2RhdGUsIGZvcm1hdD1cIiVZXCIpLFwiJVlcIilcbmtvYmVEYXRhJFllYXIgPC0gZmxvb3IoYXMubnVtZXJpYyhrb2JlRGF0YSRZZWFyKSlcblxuIyBSZW1vdmUgY29sdW1ucyB3ZSBkb250IG5lZWRcbmtvYmVEYXRhPC0gc3Vic2V0KGtvYmVEYXRhLCBzZWxlY3Q9YygtZ2FtZV9kYXRlLC1nYW1lX2lkLC10ZWFtX2lkLC10ZWFtX25hbWUsLW1hdGNodXAsLW9wcG9uZW50LCAtc2Vhc29uKSlcbmhlYWQoa29iZURhdGEpXG5gYGAifQ== -->
+<pre class="r"><code>kobeData &lt;- read.csv(&#39;kobe_data.csv&#39;);
+kobeData  &lt;-na.omit(kobeData);
+
+# Parse Game date into Years 
+kobeData$Year &lt;- format(as.Date(kobeData$game_date, format=&quot;%Y&quot;),&quot;%Y&quot;)
+kobeData$Year &lt;- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData&lt;- subset(kobeData, select=c(-game_date,-game_id,-team_id,-team_name,-matchup,-opponent, -season))
+head(kobeData)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6MTksIm5yb3ciOjZ9LCJyZGYiOiJINHNJQUFBQUFBQUFCcFZXelcvalJCUjM4OW1HYmRJbTNXcGhZYkhna3RVcVJmMWdWUTVJU1ZQS2h3SWJwUzFhSktwb2FrOWFLNDRuc3NmdEJpU3VJTVNGRTRnZTlnL2dBQkpIT1BTdmdIOENhUVZhVGtoYm5oMC9lK3h4eXpiU2k4ZnY5K2JOK3g3M3RoK3VseDZXRkVYSkt0bkNqSkxOdzFJcHRMdXJhMit1S1VvdUEyOHpTazZaODU2UFFLb0dDNkRzdkNjR2RGc2dmSDg1c2JGZzBoTnFPckJhQUhvcjROWmFwa2tuNmdNMlZyZGRhNmp1SGpNZVFFc1IxQ0VUZDZ3NkVYYW43WEp1V0VmcUR2eFJXKzB4MHd5a0JBMVZsSktReFczYk9QR1FMUUtIT2lsQTBwbzdDRng1NHEwMEtRRi9OY1JOUm5ob3dBZnVLS2JtSlVrc0tSSGErUjVqdzFUQTN5RjRWa1ZBTWpvOHJRY1pzaDBxU3l5anhLNUpSbEpvNXBLTTZnN1JLVGtsRXltOEVaSjBhUG5LdUM1Y0VzOXFQRURDU2JVZEVHV242cjVjV0dVL1pyNXBvaGZKU0paOWxVbXhLVGNwTzVkMHB5UzcwSFZOMHgxTElVRiswb0hGcnNzUGlUYVV6SzhpSUtjSmtkUTBMV0o2SllXWDV4MlJTeFM2bHBYYVJBaElUWVRBMVUyVUpwVjJybFQ3Q0NTelVVVkFPdXRGUkx3c05QYkhjaXVpd0JWQkNpUlNnN1NBNko0UjIxVk9sYTd0Y3VxVmlEYVU2cUhzS1pBT24wMm9YZHB6Yll2WXpMVjBLUzJ2Q1ZpOFE1Tk8zMHFURkRUZEZ2SDBKSW1HSlBNa1l0SFI4ZXNpcjVuRXdkc2l2RU1HUk9QTWh0VXo0ZmJKQ1pRSm52bXB1c3hGb0tHQWpacnM1NXlYZ3N0R2dOVFdlVDhCVXV6OXM3SVhWMW1yb0xVM2dGNEh1Z2QwQnZRVTZGOHZ2eDdlYk9WL2ZMeC85bmF6K1ZUN3E2VisybXcrZVdmenljWWZJYjlWWEtybWY4dmdPK3E5dUxqUWdEeDlYM3QzTjZ5Wk12M2h1ZDd2UzZDZkF2eWZnT2VmZTM1dzF2MzU3ODkvT1QvNDd0YzMvdno0OS9PRHI1aXhmYlI1ZnZBdC9ML3l4Zm5CRDkvYzdIemZ4M2RCci9mWlVBeldIdm1SRWZBWmdienNaQU1TN1VyN0liNE0xQURhVVB4dkRrVU4xb2hYZ3FndkMvNGsvWjZSbjlrMCt3U0tWVThHZTNDdHV3Y0ZUMDFkZlpjUkU3bnJjZTV6VkVPc2RyMW81SldvZGpPWDFHN1pud3R0NXRxOHZ0VytpelhhcGhhbmRqMWtMSFhvZ0t1N2hrN1ZBT3FFMkkwUXEzZVFkN05uSEIzSE4vVENEZk1SV08vZHZaWnJlWUVLMFRQbVdoRW5kK3VRblZDVkgxTjF5NlprcUs1SC9hb05OYzlsdFBaOVM5MERzUzR4TEs3V1AySldvOWNLcmZYZGF6UGJnb2tVcXZqUTBCczlBbE1xWUZSNjFPRzJvWEdxcXkwNERjTTdkVFhjZlIxZnMwTHg1S09VeG56Tm96MnI5eHRyRytxQXJ3U000dHJHUGVGMWRyT3hlbDk0cjBScEYwZFJwVU1kQjBKQkxIWFRsNzdPRU1KR3pBbjVLU280aEI0My9TNTUzbWR5Y2x0a1JIRnkxd0xtQzJDRndhdytuNHd4RFZXTmpRNE5pK3A5NzJZUmtma2owTkNIKzliaWZVTVBtRm1UaEZQWVpGci9rZmd5Q1lXWWhTVTFNaXlYVTZkdjB4SFVDdHhTR0pFeHRRMkdhbWZISnBtd3djREJiUTdWbUtYTDIrWjlLM1hENGNUUzBOS3l6eHpCRmRrZm1BUkY1NUlPVGNVK1l4YnRrNmpnS2hIM2tEaUdKck50b1dxTFBqc01SKzRUU3V4RTVPZHNkcnFDMGYrZlZLY1dTMGtubkt3TWJGQXhMWmlZK2lJYmV6a0U1Wmxhb0V6Y1BHTW5HQlg0OGdGTmVrTTdoanUyNFEzdGt0QW44OEd6SUt4cjB5Tnp5WjRwVU9zSVNpVk1PVG1rNGZRRnAzMmZWOFkyakFUMEJMak9DbWM4bk5JbGpabkltVGJEcy84QVpOY2RxUGdPQUFBPSJ9 -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["action_type"],"name":[1],"type":["fctr"],"align":["left"]},{"label":["combined_shot_type"],"name":[2],"type":["fctr"],"align":["left"]},{"label":["game_event_id"],"name":[3],"type":["int"],"align":["right"]},{"label":["lat"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["loc_x"],"name":[5],"type":["int"],"align":["right"]},{"label":["loc_y"],"name":[6],"type":["int"],"align":["right"]},{"label":["lon"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["minutes_remaining"],"name":[8],"type":["int"],"align":["right"]},{"label":["period"],"name":[9],"type":["int"],"align":["right"]},{"label":["playoffs"],"name":[10],"type":["int"],"align":["right"]},{"label":["seconds_remaining"],"name":[11],"type":["int"],"align":["right"]},{"label":["shot_distance"],"name":[12],"type":["int"],"align":["right"]},{"label":["shot_made_flag"],"name":[13],"type":["int"],"align":["right"]},{"label":["shot_type"],"name":[14],"type":["fctr"],"align":["left"]},{"label":["shot_zone_area"],"name":[15],"type":["fctr"],"align":["left"]},{"label":["shot_zone_basic"],"name":[16],"type":["fctr"],"align":["left"]},{"label":["shot_zone_range"],"name":[17],"type":["fctr"],"align":["left"]},{"label":["shot_id"],"name":[18],"type":["int"],"align":["right"]},{"label":["Year"],"name":[19],"type":["dbl"],"align":["right"]}],"data":[{"1":"Jump Shot","2":"Jump Shot","3":"12","4":"34.0443","5":"-157","6":"0","7":"-118.4268","8":"10","9":"1","10":"0","11":"22","12":"15","13":"0","14":"2PT Field Goal","15":"Left Side(L)","16":"Mid-Range","17":"8-16 ft.","18":"2","19":"2000","_rn_":"2"},{"1":"Jump Shot","2":"Jump Shot","3":"35","4":"33.9093","5":"-101","6":"135","7":"-118.3708","8":"7","9":"1","10":"0","11":"45","12":"16","13":"1","14":"2PT Field Goal","15":"Left Side Center(LC)","16":"Mid-Range","17":"16-24 ft.","18":"3","19":"2000","_rn_":"3"},{"1":"Jump Shot","2":"Jump Shot","3":"43","4":"33.8693","5":"138","6":"175","7":"-118.1318","8":"6","9":"1","10":"0","11":"52","12":"22","13":"0","14":"2PT Field Goal","15":"Right Side Center(RC)","16":"Mid-Range","17":"16-24 ft.","18":"4","19":"2000","_rn_":"4"},{"1":"Driving Dunk Shot","2":"Dunk","3":"155","4":"34.0443","5":"0","6":"0","7":"-118.2698","8":"6","9":"2","10":"0","11":"19","12":"0","13":"1","14":"2PT Field Goal","15":"Center(C)","16":"Restricted Area","17":"Less Than 8 ft.","18":"5","19":"2000","_rn_":"5"},{"1":"Jump Shot","2":"Jump Shot","3":"244","4":"34.0553","5":"-145","6":"-11","7":"-118.4148","8":"9","9":"3","10":"0","11":"32","12":"14","13":"0","14":"2PT Field Goal","15":"Left Side(L)","16":"Mid-Range","17":"8-16 ft.","18":"6","19":"2000","_rn_":"6"},{"1":"Layup Shot","2":"Layup","3":"251","4":"34.0443","5":"0","6":"0","7":"-118.2698","8":"8","9":"3","10":"0","11":"52","12":"0","13":"1","14":"2PT Field Goal","15":"Center(C)","16":"Restricted Area","17":"Less Than 8 ft.","18":"7","19":"2000","_rn_":"7"}],"options":{"columns":{"min":{},"max":[10],"total":[19]},"rows":{"min":[10],"max":[10],"total":[6]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogImtvYmVfR2JtIg0Kb3V0cHV0OiBodG1sX25vdGVib29rDQotLS0NCg0KVGhpcyBpcyBhbiBbUiBNYXJrZG93bl0oaHR0cDovL3JtYXJrZG93bi5yc3R1ZGlvLmNvbSkgTm90ZWJvb2suIFdoZW4geW91IGV4ZWN1dGUgY29kZSB3aXRoaW4gdGhlIG5vdGVib29rLCB0aGUgcmVzdWx0cyBhcHBlYXIgYmVuZWF0aCB0aGUgY29kZS4gDQoNClRyeSBleGVjdXRpbmcgdGhpcyBjaHVuayBieSBjbGlja2luZyB0aGUgKlJ1biogYnV0dG9uIHdpdGhpbiB0aGUgY2h1bmsgb3IgYnkgcGxhY2luZyB5b3VyIGN1cnNvciBpbnNpZGUgaXQgYW5kIHByZXNzaW5nICpDdHJsK1NoaWZ0K0VudGVyKi4gDQoNCmBgYHtyfQ0KcGxvdChjYXJzKQ0KYGBgDQoNCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogImtvYmVfR2JtIg0Kb3V0cHV0OiBodG1sX25vdGVib29rDQotLS0NCg0KVGhpcyBpcyBhbiBbUiBNYXJrZG93bl0oaHR0cDovL3JtYXJrZG93bi5yc3R1ZGlvLmNvbSkgTm90ZWJvb2suIFdoZW4geW91IGV4ZWN1dGUgY29kZSB3aXRoaW4gdGhlIG5vdGVib29rLCB0aGUgcmVzdWx0cyBhcHBlYXIgYmVuZWF0aCB0aGUgY29kZS4gDQoNClRyeSBleGVjdXRpbmcgdGhpcyBjaHVuayBieSBjbGlja2luZyB0aGUgKlJ1biogYnV0dG9uIHdpdGhpbiB0aGUgY2h1bmsgb3IgYnkgcGxhY2luZyB5b3VyIGN1cnNvciBpbnNpZGUgaXQgYW5kIHByZXNzaW5nICpDdHJsK1NoaWZ0K0VudGVyKi4gDQoNCmBgYHtyfQ0KbGlicmFyeShkcGx5cikgICAgICMgZm9yIGRhdGEgd3JhbmdsaW5nDQpsaWJyYXJ5KGdncGxvdDIpICAgIyBmb3IgYXdlc29tZSBwbG90dGluZw0KDQojIE1vZGVsaW5nIHBhY2thZ2VzDQpsaWJyYXJ5KGVhcnRoKSAgICAgIyBmb3IgZml0dGluZyBNQVJTIG1vZGVscw0KbGlicmFyeShjYXJldCkgICAgICMgZm9yIGF1dG9tYXRpbmcgdGhlIHR1bmluZyBwcm9jZXNzDQoNCiMgTW9kZWwgaW50ZXJwcmV0YWJpbGl0eSBwYWNrYWdlcw0KbGlicmFyeSh2aXApICAgICAgICMgZm9yIHZhcmlhYmxlIGltcG9ydGFuY2UNCmxpYnJhcnkocGRwKSAgICAgICAjIGZvciB2YXJpYWJsZSByZWxhdGlvbnNoaXBzDQoNCmxpYnJhcnkodGlkeXZlcnNlKQ0KbGlicmFyeShtbGJlbmNoKQ0KbGlicmFyeSh4Z2Jvb3N0KQ0KYGBgDQoNCmBgYHtyfQ0Ka29iZURhdGEgPC0gcmVhZC5jc3YoJ2tvYmVfZGF0YS5jc3YnKTsNCmtvYmVEYXRhICA8LW5hLm9taXQoa29iZURhdGEpOw0KDQojIFBhcnNlIEdhbWUgZGF0ZSBpbnRvIFllYXJzIA0Ka29iZURhdGEkWWVhciA8LSBmb3JtYXQoYXMuRGF0ZShrb2JlRGF0YSRnYW1lX2RhdGUsIGZvcm1hdD0iJVkiKSwiJVkiKQ0Ka29iZURhdGEkWWVhciA8LSBmbG9vcihhcy5udW1lcmljKGtvYmVEYXRhJFllYXIpKQ0KDQojIFJlbW92ZSBjb2x1bW5zIHdlIGRvbnQgbmVlZA0Ka29iZURhdGE8LSBzdWJzZXQoa29iZURhdGEsIHNlbGVjdD1jKC1nYW1lX2RhdGUsLWdhbWVfaWQsLXRlYW1faWQsLXRlYW1fbmFtZSwtbWF0Y2h1cCwtb3Bwb25lbnQsIC1zZWFzb24pKQ0KaGVhZChrb2JlRGF0YSkNCmBgYA0KDQo=</div>
 
 
 

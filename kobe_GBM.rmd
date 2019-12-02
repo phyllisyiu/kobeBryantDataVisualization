@@ -8,6 +8,32 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
 ```{r}
-plot(cars)
+library(dplyr)     # for data wrangling
+library(ggplot2)   # for awesome plotting
+
+# Modeling packages
+library(earth)     # for fitting MARS models
+library(caret)     # for automating the tuning process
+
+# Model interpretability packages
+library(vip)       # for variable importance
+library(pdp)       # for variable relationships
+
+library(tidyverse)
+library(mlbench)
+library(xgboost)
+```
+
+```{r}
+kobeData <- read.csv('kobe_data.csv');
+kobeData  <-na.omit(kobeData);
+
+# Parse Game date into Years 
+kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
+kobeData$Year <- floor(as.numeric(kobeData$Year))
+
+# Remove columns we dont need
+kobeData<- subset(kobeData, select=c(-game_date,-game_id,-team_id,-team_name,-matchup,-opponent, -season))
+head(kobeData)
 ```
 

@@ -102,7 +102,7 @@ lasso.model <- glmnet(x, y, alpha = 1, family = "binomial",
 # Make prediction on test data
 x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
 probabilities <- lasso.model %>% predict(newx = x.test)
-predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+predicted.classes <- ifelse(probabilities > mean(probabilities), 1, 0)
 # Model accuracy
 observed.classes <- test.data$shot_made_flag
 mean(predicted.classes == observed.classes)
@@ -110,4 +110,26 @@ mean(predicted.classes == observed.classes)
 ```{r}
 coef(cv.lasso, cv.lasso$lambda.1se)
 ```
+```{r}
+op <- par(mfrow=c(1, 2))
+plot(cv.lasso$glmnet.fit, "norm",   label=TRUE)
+plot(cv.lasso$glmnet.fit, "lambda", label=TRUE)
+par(op)
+```
 
+```{r}
+x.test <- model.matrix(shot_made_flag ~., test.data)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > mean(probabilities), 1, 0)
+# get num of data points in test set
+sizeTestSet = dim(test.data)[1]
+
+# get # of data points that are misclassified
+error = sum(predicted.classes != test.data$shot_made_flag)
+
+# calculate misclassification rate
+misclassificationRate = error / sizeTestSet
+
+# display misclassification rate
+print(misclassificationRate)
+```

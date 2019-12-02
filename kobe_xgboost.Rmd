@@ -97,8 +97,8 @@ classifier = xgboost(
 
 Predicting the Test set results
 ```{r}
-y_pred = predict(classifier, newdata = as.matrix(subset(testingSet, select = -c(shot_made_flag))))
-y_pred = (y_pred >= 0.5)
+predictedLabels = predict(classifier, newdata = as.matrix(subset(testingSet, select = -c(shot_made_flag))))
+predictedLabels = (predictedLabels >= 0.5)
 
 # Making the Confusion Matrix
 # quadrant ii: true positive - predict that shot went in, and you're right
@@ -106,10 +106,23 @@ y_pred = (y_pred >= 0.5)
 # quadrant i (type 1 error): predict that shot went in, but you're wrong
 # quadrant iv (type 2 error): predict shot didn't go in, but you're wrong
 
-cm = table(testingSet$shot_made_flag, y_pred)
+cm = table(testingSet$shot_made_flag, predictedLabels)
 
 ctable <- as.table(cm, nrow = 2, byrow = TRUE)
 fourfoldplot(ctable, color = c("#CC6666", "#99CC99"),
-             conf.level = 0, margin = 1, main = "Confusion Matrix of Shots Made")
+             conf.level = 0, margin = 1, main = "Confusion Matrix of Shots Made using XGBoost")
 ```
 
+```{r}
+# get num of data points in test set
+sizeTestSet = dim(testingSet)[1]
+
+# get # of data points that are misclassified
+error = sum(predictedLabels != testingSet$shot_made_flag)
+
+# calculate misclassification rate
+misclassificationRate = error / sizeTestSet
+
+# display misclassification rate
+print(misclassificationRate)
+```

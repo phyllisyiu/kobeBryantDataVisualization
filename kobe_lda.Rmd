@@ -69,9 +69,11 @@ kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
 kobeData$Year <- floor(as.numeric(kobeData$Year))
 
 # Remove columns we dont need
-kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining))
+kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining, -opponent))
 head(kobeData)
 ```
+
+
 
 make dummy variables
 ```{r}
@@ -92,7 +94,13 @@ for (i in colnames(trsf)) {
 }
 ```
 
-
+check colinearity
+```{r}
+# install.packages('corrplot')
+library("corrplot")
+cor(subset(trsf, select = -c(shot_made_flag)))
+corrplot(cor(subset(trsf, select = -c(shot_made_flag))), method = "number")11
+```
 
 Construct testing and training sets 
 ```{r}
@@ -108,6 +116,12 @@ testingSet <- trsf[testing, ]
 ```{r}
 library(MASS)
 lda = lda(formula = shot_made_flag ~ ., data = trainingSet)
+
+# plotting LDA model
+# projectedData = as.matrix(trainingSet) %*% lda$scaling
+```
+
+```{r}
 # use lda to transform dataset
 trainingSet = as.data.frame(predict(lda, trainingSet))
 
@@ -127,7 +141,7 @@ testingFeatures <- subset(testingSet, select=c(-class))
 
 apply knn
 ```{r}
-predictedLabels = knn(trainingFeatures, testingFeatures, trainingLabels, k = 5)
+predictedLabels = knn(trainingFeatures, testingFeatures, trainingLabels, k = 4)
 ```
 
 misclassifcation rate

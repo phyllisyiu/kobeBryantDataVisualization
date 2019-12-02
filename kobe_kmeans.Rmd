@@ -51,7 +51,7 @@ kobeData$Year <- format(as.Date(kobeData$game_date, format="%Y"),"%Y")
 kobeData$Year <- floor(as.numeric(kobeData$Year))
 
 # Remove columns we dont need
-kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining))
+kobeData<- subset(kobeData, select=c(-shot_zone_area, -shot_zone_range, -shot_zone_basic, -action_type,-game_date,-game_id,-team_id,-team_name,-matchup, -season, -minutes_remaining, -seconds_remaining, -opponent))
 head(kobeData)
 ```
 
@@ -89,14 +89,14 @@ optimal number is 4 clusters based on elbow method.
 
 ```{r}
 # lda first
-library(MASS)
-lda = lda(formula = shot_made_flag ~ ., data = trsf)
-# use lda to transform dataset
-trsf = as.data.frame(predict(lda, trsf))
-
-# use new extracted features from lda 
-# based on how many classes there are, we get numClasses - 1 features from lda.
-trsf = trsf[c(4, 1)]
+# library(MASS)
+# lda = lda(formula = shot_made_flag ~ ., data = trsf)
+# # use lda to transform dataset
+# trsf = as.data.frame(predict(lda, trsf))
+# 
+# # use new extracted features from lda 
+# # based on how many classes there are, we get numClasses - 1 features from lda.
+# trsf = trsf[c(4, 1)]
 
 # apply kmeans to dataset
 set.seed(29)

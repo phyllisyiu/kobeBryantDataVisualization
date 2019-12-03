@@ -144,13 +144,21 @@ apply knn
 predictedLabels = knn(trainingFeatures, testingFeatures, trainingLabels, k = 4)
 ```
 
+confusion matrix
+```{r}
+cm = table(testingSet$shot_made_flag, predictedLabels)
+
+ctable <- as.table(cm, nrow = 2, byrow = TRUE)
+fourfoldplot(ctable, color = c("#CC6666", "#99CC99"),
+             conf.level = 0, margin = 1, main = "Confusion Matrix of Shots Made using LDA and KNN")
+```
 misclassifcation rate
 ```{r}
 # get num of data points in test set
 sizeTestSet = dim(testingSet)[1]
 
 # get # of data points that are misclassified
-error = sum(predictedLabels != testingSet$class)
+error = sum(predictedLabels != testingSet$shot_made_flag)
 
 # calculate misclassification rate
 misclassificationRate = error / sizeTestSet

@@ -106,3 +106,34 @@ misclassificationRate = error / sizeTestSet
 # display misclassification rate
 print(misclassificationRate)
 ```
+
+False Positive Rate
+```{r}
+sizeTestSet = dim(testingSet)[1]
+Is1 = (predictedLabels == "1")
+sum(Is1)
+
+IsWrong = (predictedLabels != testingSet$shot_made_flag)
+IsWrongAnd1 = (IsWrong & Is1)
+error = sum(IsWrongAnd1)
+error 
+
+misclassification_rate = error/sizeTestSet
+print(misclassification_rate)
+```
+
+False Negative Rate
+```{r}
+sizeTestSet = dim(testingSet)[1]
+Is0 = (predictedLabels == '0')
+error = sum(Is0)
+error
+
+IsWrong = (predictedLabels != testingSet$shot_made_flag)
+IsWrongAnd0 = (IsWrong & Is0)
+error = sum(IsWrongAnd0)
+error
+
+misclassification_rate = error/sizeTestSet
+print(misclassification_rate)
+```
